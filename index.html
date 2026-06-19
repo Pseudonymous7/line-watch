@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Walmart Queue Watch — get it</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, "Segoe UI", Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #1b1736, #0a0814);
+    color: #eceaf5; padding: 32px 18px;
+  }
+  .card {
+    width: 100%; max-width: 540px; background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; padding: 30px 30px 26px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+  }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .tag { color: #8ab4ff; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; }
+  p { line-height: 1.55; color: #c9c6da; font-size: 15px; }
+  .drag {
+    display: inline-block; margin: 6px 0 2px; padding: 13px 22px; border-radius: 12px;
+    background: linear-gradient(180deg, #5b8bff, #3f6bdb); color: #fff !important;
+    font-weight: 800; font-size: 16px; text-decoration: none; cursor: grab;
+    box-shadow: 0 6px 22px rgba(63,107,219,0.5); user-select: none;
+  }
+  .drag:active { cursor: grabbing; }
+  ol { padding-left: 20px; line-height: 1.7; font-size: 15px; color: #d7d4e6; }
+  ol b { color: #fff; }
+  .hint { font-size: 13px; color: #9b97b4; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button.copy {
+    background: rgba(255,255,255,0.07); color: #d7d4e6; border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+  }
+  button.copy:hover { background: rgba(255,255,255,0.12); }
+  .note { margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; color: #9b97b4; }
+  code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 5px; }
+  .ok { color: #6ee7a0; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="tag">Walmart Queue Watch</div>
+    <h1>See your spot in the Walmart line 🎟️</h1>
+    <p>
+      Stuck in a Walmart drop's "waiting room"? This shows your <b>place in line</b>,
+      <b>how long</b> until your turn, and <b>flashes the tab</b> the second it's your turn to buy.
+      No download, no sign-up — it just reads the same info the page already has.
+    </p>
+
+    <p style="margin-bottom:6px"><b>Step 1.</b> Drag this button up to your bookmarks bar:</p>
+    <!-- href is filled in by the script below (the real bookmarklet code). -->
+    <a class="drag" id="bm" href="#" onclick="return false">📍 Walmart Queue Watch</a>
+    <p class="hint" id="barHint">
+      (Don't see a bookmarks bar? Press <code>Ctrl</code>+<code>Shift</code>+<code>B</code> to show it — <code>⌘</code>+<code>Shift</code>+<code>B</code> on a Mac.)
+    </p>
+
+    <ol>
+      <li><b>Step 2.</b> Go do your Walmart drop like normal. When you hit the "you're in line" waiting room…</li>
+      <li><b>Step 3.</b> Click the <b>📍 Walmart Queue Watch</b> bookmark you just made.</li>
+      <li>A little box pops up with your number + countdown. When it turns green and says <span class="ok">GO!</span> — buy it!</li>
+    </ol>
+
+    <div class="row">
+      <span class="hint">Can't drag it?</span>
+      <button class="copy" id="copyBtn">Copy the bookmark link</button>
+      <span class="hint" id="copyMsg"></span>
+    </div>
+
+    <div class="note">
+      Click the bookmark again to close the box. It only works while you're on the Walmart
+      waiting-room page (that's where your spot lives). It never sees your password or payment —
+      it only reads your place in line.
+    </div>
+  </div>
+
+<script>
+// The actual watcher. Keep this body identical to tools/queue-watch/queue-watch.js
+// (minus its outer IIFE wrapper). We derive the bookmarklet from this function's
+// own source, so there's no hand-escaping to get wrong.
+function wmQueueWatch() {
+  'use strict';
+  var ID = 'wm-queue-watch';
+  var existing = document.getElementById(ID);
+  if (existing) {
+    if (window.__wmqwStop) window.__wmqwStop();
+    else existing.remove();
+    return;
+  }
+  function getQueueId() {
+    try {
+      var qp = new URLSearchParams(location.search).get('qpdata');
+      if (qp) { var m = JSON.parse(qp); if (m && m.queue) return String(m.queue); }
+    } catch (e) {}
+    var hay = location.href + ' ' + (document.documentElement ? document.documentElement.innerHTML : '');
+    var mm = hay.match(/issueTicket\?queue=([A-Za-z0-9_-]+)/);
+    if (mm) return mm[1];
+    mm = hay.match(/"queue"\s*:\s*"([A-Za-z0-9_-]+)"/);
+    return mm ? mm[1] : null;
+  }
+  function el(tag, style, text) {
+    var e = document.createElement(tag);
+    if (style) e.setAttribute('style', style);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  var box = el('div', [
+    'position:fixed', 'top:16px', 'right:16px', 'z-index:2147483647',
+    'width:240px', 'padding:16px 18px', 'border-radius:14px',
+    'font-family:system-ui,Segoe UI,Arial,sans-serif',
+    'background:rgba(12,10,24,0.96)', 'color:#fff',
+    'box-shadow:0 8px 40px rgba(0,0,0,0.5)', 'border:1px solid rgba(255,255,255,0.12)',
+    'text-align:center', 'user-select:none'
+  ].join(';'));
+  box.id = ID;
+  var close = el('div', 'position:absolute;top:6px;right:11px;cursor:pointer;color:#aaa;font-size:18px;line-height:1', '×');
+  var title = el('div', 'font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8ab4ff;margin-bottom:8px', 'Queue Watch');
+  var big = el('div', 'font-size:30px;font-weight:800;line-height:1.1;margin:2px 0', '…');
+  var sub = el('div', 'font-size:13px;color:#cfd2e0;margin-top:6px;min-height:18px', 'reading your spot…');
+  var odds = el('div', 'display:none');
+  box.appendChild(close); box.appendChild(title); box.appendChild(big); box.appendChild(sub); box.appendChild(odds);
+  document.body.appendChild(box);
+  var queueId = getQueueId();
+  var timer = null, tick = null, stopped = false;
+  var etaAt = null;
+  var origTitle = document.title;
+  function stop() {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    if (tick) clearInterval(tick);
+    document.title = origTitle;
+    window.__wmqwStop = null;
+  }
+  window.__wmqwStop = function () { stop(); box.remove(); };
+  close.onclick = window.__wmqwStop;
+  function fmtEta() {
+    if (etaAt == null) return '';
+    var s = Math.max(0, Math.round((etaAt - Date.now()) / 1000));
+    var m = Math.floor(s / 60);
+    return m > 0 ? ('~' + m + ' min') : ('~' + s + ' sec');
+  }
+  function paintCountdown() {
+    if (etaAt == null) return;
+    var e = fmtEta();
+    sub.textContent = e ? ('about ' + e + ' to your turn') : 'almost your turn…';
+  }
+  function setOdds(like) {
+    if (!like) { odds.setAttribute('style', 'display:none'); return; }
+    var ok = String(like).toLowerCase() === 'likely';
+    odds.textContent = ok ? 'odds: likely to get in' : 'odds: unlikely (stock running low)';
+    odds.setAttribute('style',
+      'font-size:11px;margin-top:9px;display:inline-block;padding:3px 9px;border-radius:8px;' +
+      (ok ? 'background:#0a3d1c;color:#bff5cf' : 'background:#5e3a00;color:#ffd99a'));
+  }
+  function admitted() {
+    if (tick) clearInterval(tick);
+    if (timer) clearTimeout(timer);
+    big.textContent = '🎉 GO!';
+    big.setAttribute('style', 'font-size:30px;font-weight:800;color:#39ff88;margin:2px 0');
+    sub.textContent = "It's your turn — buy it now!";
+    setOdds(null);
+    var on = true, n = 0;
+    var fl = setInterval(function () {
+      document.title = on ? '🟢 GO BUY NOW' : '🎉 YOUR TURN!';
+      on = !on;
+      if (++n > 30) { clearInterval(fl); document.title = origTitle; }
+    }, 700);
+  }
+  function schedule(ms) {
+    if (stopped) return;
+    timer = setTimeout(poll, Math.max(5000, ms || 5000));
+  }
+  function poll() {
+    if (stopped) return;
+    if (!queueId) queueId = getQueueId();
+    if (!queueId) {
+      big.textContent = '—';
+      big.setAttribute('style', 'font-size:22px;font-weight:800;color:#fff;margin:2px 0');
+      sub.textContent = 'Not in a Walmart queue. Open the drop, then click again once you see the waiting room.';
+      schedule(8000);
+      return;
+    }
+    fetch('https://q-api.www.walmart.com/issueTicket?queue=' + encodeURIComponent(queueId),
+      { method: 'GET', credentials: 'include', headers: { 'accept': '*/*' } })
+      .then(function (r) {
+        if (r.status === 429) { sub.textContent = 'checking… (easing off)'; schedule(30000); return null; }
+        if (!r.ok) { sub.textContent = 'waiting…'; schedule(8000); return null; }
+        return r.json();
+      })
+      .then(function (j) {
+        if (!j) return;
+        if (String(j.state || '').toLowerCase() === 'valid') { admitted(); return; }
+        var pos = (typeof j.ticket === 'number') ? j.ticket : null;
+        big.textContent = pos != null ? ('#' + pos.toLocaleString()) : 'in line';
+        big.setAttribute('style', 'font-size:30px;font-weight:800;color:#fff;margin:2px 0');
+        etaAt = (typeof j.expectedTurnTimeUnixTimestamp === 'number') ? j.expectedTurnTimeUnixTimestamp : null;
+        paintCountdown();
+        setOdds(j.customMetadata && j.customMetadata.admissionLikelihood);
+        var next = (typeof j.nextRefreshUnixTimestamp === 'number') ? (j.nextRefreshUnixTimestamp - Date.now()) : 5000;
+        schedule(next);
+      })
+      .catch(function () { sub.textContent = 'waiting…'; schedule(8000); });
+  }
+  tick = setInterval(paintCountdown, 1000);
+  poll();
+}
+
+// Derive the bookmarklet from the function above (no manual escaping).
+var BOOKMARKLET = 'javascript:(' + encodeURIComponent(wmQueueWatch.toString()) + ')();';
+document.getElementById('bm').setAttribute('href', BOOKMARKLET);
+
+document.getElementById('copyBtn').addEventListener('click', function () {
+  var msg = document.getElementById('copyMsg');
+  navigator.clipboard.writeText(BOOKMARKLET).then(function () {
+    msg.textContent = 'Copied! Make a new bookmark and paste this as the URL.';
+  }, function () {
+    msg.textContent = 'Copy failed — select the button, right-click → Copy link.';
+  });
+});
+</script>
+</body>
+</html>
