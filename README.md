@@ -7,3 +7,7 @@ A tiny bookmarklet that shows your live spot in a Walmart waiting-room queue —
 Open that page, drag the button up to your bookmarks bar, and click it whenever you're stuck in a Walmart drop's "you're in line" waiting room.
 
 It only reads your place in line — the same info the page already shows you. It never touches your password, payment, or cart.
+
+---
+
+Made by **Pseudo**
