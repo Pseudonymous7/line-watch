@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Round1 Pass — get it</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, "Segoe UI", Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #1b1736, #0a0814);
+    color: #eceaf5; padding: 32px 18px;
+  }
+  .card {
+    width: 100%; max-width: 540px; background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; padding: 30px 30px 26px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+  }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .tag { color: #ff8f6b; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; }
+  p { line-height: 1.55; color: #c9c6da; font-size: 15px; }
+  .drag {
+    display: inline-block; margin: 6px 0 2px; padding: 13px 22px; border-radius: 12px;
+    background: linear-gradient(180deg, #ff7a54, #e0552f); color: #fff !important;
+    font-weight: 800; font-size: 16px; text-decoration: none; cursor: grab;
+    box-shadow: 0 6px 22px rgba(224,85,47,0.5); user-select: none;
+  }
+  .drag:active { cursor: grabbing; }
+  ol { padding-left: 20px; line-height: 1.7; font-size: 15px; color: #d7d4e6; }
+  ol b { color: #fff; }
+  .hint { font-size: 13px; color: #9b97b4; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button.copy {
+    background: rgba(255,255,255,0.07); color: #d7d4e6; border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+  }
+  button.copy:hover { background: rgba(255,255,255,0.12); }
+  .note { margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; color: #9b97b4; }
+  code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 5px; }
+  .ok { color: #6ee7a0; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="tag">Round1 Pass</div>
+    <h1>Grab your Round1 pass 🎟️</h1>
+    <p>
+      Through the Round1 waiting room? This copies your <b>pass</b> in one click, so every one of
+      your bot tasks can skip the line too — and you can share it with your group. No download, no
+      sign-up: it only reads the pass the page already gave you.
+    </p>
+
+    <p style="margin-bottom:6px"><b>Step 1.</b> Drag this button up to your bookmarks bar:</p>
+    <!-- href is filled in by the script below, derived from the function's own source. -->
+    <a class="drag" id="bm" href="#" onclick="return false">🎟️ Round1 Pass</a>
+    <p class="hint" id="barHint">
+      (Don't see a bookmarks bar? Press <code>Ctrl</code>+<code>Shift</code>+<code>B</code> to show it — <code>⌘</code>+<code>Shift</code>+<code>B</code> on a Mac.)
+    </p>
+
+    <ol>
+      <li><b>Step 2.</b> Do your Round1 drop as normal. Wait until you're <b>through the line</b> and the entry form loads.</li>
+      <li><b>Step 3.</b> Click the <b>🎟️ Round1 Pass</b> bookmark you just made — it copies your pass to the clipboard.</li>
+      <li>In the bot, open <b>Settings → Store settings → Round1</b>, paste it into <b>Waiting room pass</b>, and hit <b>Save</b>. Every task now skips the line.</li>
+    </ol>
+
+    <div class="row">
+      <span class="hint">Can't drag it?</span>
+      <button class="copy" id="copyBtn">Copy the bookmark link</button>
+      <span class="hint" id="copyMsg"></span>
+    </div>
+
+    <div class="note">
+      Run it on the Round1 registration page once you're through the line — that's where the pass
+      lives, and it lasts about 30 minutes. It never sees your password or payment; it only reads
+      your admission pass. A pass shared with your group lets all of you skip the line.
+    </div>
+    <div style="text-align:center; margin-top:18px; font-size:12px; color:#8a87a0;">Made by <span style="color:#ff8f6b; font-weight:500;">Pseudo</span></div>
+  </div>
+
+<script>
+// The reader. We derive the bookmarklet from this function's OWN source below, so there is no
+// hand-escaping to get wrong. Keep it self-contained — a bookmarklet has no other scope.
+function r1GrabPass() {
+  'use strict';
+  try {
+    var found = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (!k || k.indexOf('ss_wroom_') !== 0) continue;
+      var v = localStorage.getItem(k);
+      if (!v || v.indexOf('.') < 0) continue;
+      var claims = {};
+      try { claims = JSON.parse(atob(v.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))); } catch (e) {}
+      found.push({ key: k, val: v, t: claims.t, exp: claims.exp });
+    }
+    var admitted = found.filter(function (o) { return o.t === 'a' && o.exp && o.exp * 1000 > Date.now(); });
+    if (!admitted.length) {
+      var queued = found.some(function (o) { return o.t && o.t !== 'a'; });
+      alert(queued
+        ? "You're still in the waiting room line — not through yet.\n\nWait until the entry form loads, then click this again."
+        : "No Round1 pass on this page.\n\nOpen the Round1 registration page and wait until you're through the line, then click this again.");
+      return;
+    }
+    admitted.sort(function (a, b) { return b.exp - a.exp; });
+    var best = admitted[0];
+    var line = best.key + ' = ' + best.val;
+    var mins = Math.floor((best.exp - Date.now() / 1000) / 60);
+    var where = 'Paste it into the bot: Settings → Store settings → Round1 → Waiting room pass, then Save.';
+    function done(copied) {
+      alert('Round1 pass ready (' + mins + ' min left)' + (copied ? ' — COPIED to your clipboard.' : '.') +
+        '\n\n' + (copied ? where : 'Copy the line below, then paste it into the bot:\n\n' + line));
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(line).then(function () { done(true); }, function () { window.prompt(where, line); });
+    } else {
+      window.prompt(where, line);
+    }
+  } catch (e) { alert('Couldn’t read the pass: ' + e); }
+}
+
+// Build the bookmarklet from the function's own source — identical logic, zero escaping drift.
+var CODE = 'javascript:(' + r1GrabPass.toString() + ')();';
+document.getElementById('bm').href = CODE;
+
+document.getElementById('copyBtn').addEventListener('click', function () {
+  var msg = document.getElementById('copyMsg');
+  function ok() { msg.textContent = 'Copied — make a new bookmark and paste it as the URL.'; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(CODE).then(ok, function () { window.prompt('Copy the bookmark link:', CODE); });
+  } else {
+    window.prompt('Copy the bookmark link:', CODE);
+  }
+});
+</script>
+</body>
+</html>
